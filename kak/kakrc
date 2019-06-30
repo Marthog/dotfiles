@@ -1,0 +1,92 @@
+
+# source /home/gunnar/.config/kak/pathogen.kak/rc/pathogen.kak
+# pathogen-infect "/home/gunnar/.config/kak/plugins"
+
+colorscheme marthog
+
+add-highlighter global/ number-lines -relative
+
+map global normal '<F7>' ':wa<ret>'
+
+define-command x wq
+
+define-command modify-config 'e ~/.config/kak/kakrc'
+
+define-command tab -command-completion -params 0.. \
+%{
+    tmux-terminal-window 'kak' -e %arg{@} -c %val{session}
+}
+
+define-command tabedit -file-completion -params 0..1 \
+%{
+    tmux-terminal-window 'kak' %arg{@} -c %val{session}
+}
+
+# Surrond the selection with the given text.
+def surround -params 2 \
+%{
+  exec 'i\' %arg{1} '<esc>a' %arg{2} '<esc>'
+}
+
+define-command latex-begin -params 1 \
+%{
+  exec 'i\begin{' %arg{1} '}<esc>a\end{' %arg{1} '}<esc>'
+}
+
+
+def clip-in %{ exec '| xclip -sel cur -o<esc>' }
+#def clip-out %{
+#    try %sh{ echo ${kak_selection} | xclip -sel cur -i }
+#}
+
+
+add-highlighter global/ show-matching
+# green bracket, black background and in bold
+set-face global MatchingChar "black,green+b"
+
+
+hook global InsertCompletionShow .* %{
+    try %{
+        # this command temporarily removes cursors preceded by whitespace;
+        # if there are no cursors left, it raises an error, does not
+        # continue to execute the mapping commands, and the error is eaten
+        # by the `try` command so no warning appears.
+        execute-keys -draft 'h<a-K>\h<ret>'
+        map window insert <tab> <c-n>
+        map window insert <s-tab> <c-p>
+    }
+}
+hook global InsertCompletionHide .* %{
+    unmap window insert <tab> <c-n>
+    unmap window insert <s-tab> <c-p>
+}
+
+hook global WinCreate .*\.tex %{
+   map window normal <C-b> ':latex-begin '
+   map window insert <C-b> '<esc>:latex-begin '
+}
+
+alias global tabe tabedit
+
+
+hook global BufCreate .* %{
+  set-option buffer indentwidth 2
+  set-option buffer tabstop 2
+}
+hook global BufCreate .*\.(rs|py|md) %{
+  set-option buffer indentwidth 4
+  set-option buffer tabstop 4
+}
+
+
+
+map global normal = '|fmt -w $kak_opt_autowrap_column<ret>'
+
+hook global InsertChar \t %{ try %{
+    execute-keys -draft "h<a-h><a-k>\A\h+\z<ret><a-;>;%opt{indentwidth}@"
+}}
+
+hook global InsertDelete ' ' %{ try %{
+    execute-keys -draft 'h<a-h><a-k>\A\h+\z<ret>i<space><esc><lt>'
+}}
+
